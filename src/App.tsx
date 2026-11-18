@@ -297,6 +297,311 @@ function Welcome({ chooseRole }: { chooseRole: (role: Role) => void }) {
   );
 }
 
+function AuthScreen({
+  role,
+  onBack,
+  onComplete,
+}: {
+  role: Role;
+  onBack: () => void;
+  onComplete: (session: { method: "email" | "mobile"; contact: string; mode: "login" | "signup" }) => void;
+}) {
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [method, setMethod] = useState<"email" | "mobile">("email");
+  const [step, setStep] = useState<"input" | "otp">("input");
+  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [otp, setOtp] = useState("");
+  const [error, setError] = useState("");
+
+  const roleLabel = role === "student" ? "Student" : "Instructor";
+  const accentClass = role === "student" ? "lime" : "pink";
+
+  const handleContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (method === "email") {
+      const trimmed = email.trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!trimmed) {
+        setError("Please enter your email address to continue.");
+        return;
+      }
+      if (!emailRegex.test(trimmed)) {
+        setError("Please enter a valid email address (for example, name@example.com).");
+        return;
+      }
+    } else {
+      const digits = mobile.replace(/\D/g, "");
+      if (!digits) {
+        setError("Please enter your 10-digit mobile number to continue.");
+        return;
+      }
+      if (digits.length !== 10) {
+        setError("Please enter a valid 10-digit Indian mobile number.");
+        return;
+      }
+    }
+    setOtp("");
+    setStep("otp");
+  };
+
+  const handleVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    const trimmedOtp = otp.trim();
+    if (!trimmedOtp) {
+      setError("Please enter the 6-digit demo OTP (123456).");
+      return;
+    }
+    if (trimmedOtp !== "123456") {
+      setError("Invalid OTP. Please enter the demo OTP: 123456.");
+      return;
+    }
+    const contact = method === "email" ? email.trim() : `+91 ${mobile.replace(/\D/g, "")}`;
+    onComplete({ method, contact, mode });
+  };
+
+  const handleBack = () => {
+    setError("");
+    if (step === "otp") {
+      setStep("input");
+    } else {
+      onBack();
+    }
+  };
+
+  const contactDisplay =
+    method === "email" ? email.trim() : `+91 ${mobile.replace(/\D/g, "")}`;
+
+  return (
+    <div className="setup-screen auth-flow-screen">
+      <MobileTop
+        onBack={handleBack}
+        right={
+          <span className="step-count">
+            {step === "input" ? `${role.toUpperCase()} ACCESS` : "OTP VERIFICATION"}
+          </span>
+        }
+      />
+      {step === "input" ? (
+        <form className="auth-form-shell" onSubmit={handleContinue} noValidate>
+          <main>
+            <div className="auth-role-row">
+              <span className="eyebrow">
+                {role === "student" ? "STUDENT ONBOARDING" : "INSTRUCTOR ONBOARDING"}
+              </span>
+              <span className={`pill ${accentClass}-pill`}>{roleLabel.toUpperCase()}</span>
+            </div>
+            <h1>
+              {mode === "login" ? (
+                <>
+                  Welcome back
+                  <br />
+                  to your rhythm.
+                </>
+              ) : (
+                <>
+                  Create your
+                  <br />
+                  {role} space.
+                </>
+              )}
+            </h1>
+            <p>
+              {mode === "login"
+                ? `Log in to continue to your ${role} dashboard.`
+                : `Sign up with your email or mobile number to enter your ${role} workspace.`}
+            </p>
+
+            <div className="level-tabs auth-mode-tabs" role="tablist" aria-label="Authentication mode">
+              <button
+                type="button"
+                className={mode === "login" ? "active" : ""}
+                onClick={() => {
+                  setMode("login");
+                  setError("");
+                }}
+              >
+                Log in
+              </button>
+              <button
+                type="button"
+                className={mode === "signup" ? "active" : ""}
+                onClick={() => {
+                  setMode("signup");
+                  setError("");
+                }}
+              >
+                Sign up
+              </button>
+            </div>
+
+            <div className="auth-method-stack">
+              <button
+                type="button"
+                className={`auth-method-btn ${method === "email" ? "selected" : ""}`}
+                onClick={() => {
+                  setMethod("email");
+                  setError("");
+                }}
+              >
+                <div>
+                  <small>EMAIL</small>
+                  <strong>Continue with Email</strong>
+                </div>
+                <i className="radio" />
+              </button>
+              <button
+                type="button"
+                className={`auth-method-btn ${method === "mobile" ? "selected" : ""}`}
+                onClick={() => {
+                  setMethod("mobile");
+                  setError("");
+                }}
+              >
+                <div>
+                  <small>MOBILE NUMBER</small>
+                  <strong>Continue with Mobile Number</strong>
+                </div>
+                <i className="radio" />
+              </button>
+            </div>
+
+            <div className="auth-field-group">
+              {method === "email" ? (
+                <label className="auth-label">
+                  <span>EMAIL ADDRESS</span>
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="aisha@stepin.dance"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (error) setError("");
+                    }}
+                    aria-label="Email address"
+                  />
+                </label>
+              ) : (
+                <label className="auth-label">
+                  <span>INDIAN MOBILE NUMBER (10 DIGITS)</span>
+                  <div className="mobile-input-wrap">
+                    <span className="country-prefix">+91</span>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel-national"
+                      maxLength={10}
+                      placeholder="9876543210"
+                      value={mobile}
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setMobile(cleaned);
+                        if (error) setError("");
+                      }}
+                      aria-label="10-digit mobile number"
+                    />
+                  </div>
+                </label>
+              )}
+              {error && (
+                <p className="auth-error" role="alert">
+                  {error}
+                </p>
+              )}
+            </div>
+          </main>
+          <div className="setup-footer">
+            <button type="submit" className="primary-btn">
+              Continue <Icon name="arrow" />
+            </button>
+          </div>
+        </form>
+      ) : (
+        <form className="auth-form-shell" onSubmit={handleVerifyOtp} noValidate>
+          <main>
+            <div className="auth-role-row">
+              <span className="eyebrow">SIMULATED OTP VERIFICATION</span>
+              <span className={`pill ${accentClass}-pill`}>{roleLabel.toUpperCase()}</span>
+            </div>
+            <h1>
+              Enter your
+              <br />
+              verification code.
+            </h1>
+            <p>
+              Continuing as <strong>{contactDisplay}</strong> into the {roleLabel} experience.
+            </p>
+
+            <div className="demo-otp-banner">
+              <div className="demo-otp-copy">
+                <span className="eyebrow">PROTOTYPE DEMO OTP</span>
+                <strong>Demo OTP: 123456</strong>
+                <small>Frontend jury prototype — no real email or SMS is sent.</small>
+              </div>
+              <button
+                type="button"
+                className="demo-otp-fill"
+                onClick={() => {
+                  setOtp("123456");
+                  setError("");
+                }}
+              >
+                Use 123456
+              </button>
+            </div>
+
+            <div className="auth-field-group">
+              <label className="auth-label">
+                <span>6-DIGIT DEMO OTP</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="Enter 123456"
+                  className="otp-input"
+                  value={otp}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setOtp(cleaned);
+                    if (error) setError("");
+                  }}
+                  aria-label="6-digit OTP"
+                />
+              </label>
+              {error && (
+                <p className="auth-error" role="alert">
+                  {error}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="auth-change-contact"
+              onClick={() => {
+                setError("");
+                setStep("input");
+              }}
+            >
+              Change {method === "email" ? "email address" : "mobile number"}
+            </button>
+          </main>
+          <div className="setup-footer">
+            <button type="submit" className="primary-btn">
+              {role === "student" ? "Verify & enter student space" : "Verify & enter instructor space"}{" "}
+              <Icon name="arrow" />
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 function Setup({
   role,
   onBack,
@@ -2334,11 +2639,31 @@ const instructorRoutes: InstructorPage[] = [
 ];
 
 export default function App() {
-  const storedRole = sessionStorage.getItem("stepin-role") as Role | null;
+  const storedRole = (localStorage.getItem("stepin-role") ||
+    sessionStorage.getItem("stepin-role")) as Role | null;
   const initialRole = storedRole === "student" || storedRole === "instructor" ? storedRole : null;
   const [role, setRole] = useState<Role | null>(initialRole);
-  const [pendingRole, setPendingRole] = useState<Role | null>(null);
+  const [pendingRole, setPendingRole] = useState<Role | null>(() => {
+    if (initialRole) return null;
+    const hash = window.location.hash;
+    if (hash.startsWith("#/onboarding/student")) return "student";
+    if (hash.startsWith("#/onboarding/instructor")) return "instructor";
+    return null;
+  });
   const [page, setPage] = useState<string>(() => {
+    const hashParts = window.location.hash.replace(/^#\/?/, "").split("/");
+    const hashRole = hashParts[0];
+    const hashPage = hashParts[1];
+    if (initialRole === "student" && hashRole === "student" && studentRoutes.includes(hashPage as StudentPage)) {
+      return hashPage;
+    }
+    if (
+      initialRole === "instructor" &&
+      hashRole === "instructor" &&
+      instructorRoutes.includes(hashPage as InstructorPage)
+    ) {
+      return hashPage;
+    }
     const historyPage = window.history.state?.page;
     if (initialRole === "student" && studentRoutes.includes(historyPage)) return historyPage;
     if (initialRole === "instructor" && instructorRoutes.includes(historyPage)) return historyPage;
@@ -2365,8 +2690,8 @@ export default function App() {
         window.history.replaceState({ role, page: safePage }, "", `#/${role}/${safePage}`);
       }
       if (safePage !== page) setPage(safePage);
-    } else {
-      window.history.replaceState({ auth: pendingRole ? "setup" : "welcome" }, "", "#/welcome");
+    } else if (!pendingRole) {
+      window.history.replaceState({ auth: "welcome" }, "", "#/welcome");
     }
   }, [role]);
 
@@ -2375,7 +2700,7 @@ export default function App() {
       if (!role) {
         const historyRole = event.state?.selectedRole;
         setPendingRole(
-          event.state?.auth === "setup" &&
+          (event.state?.auth === "setup" || event.state?.auth === "login") &&
             (historyRole === "student" || historyRole === "instructor")
             ? historyRole
             : null,
@@ -2397,12 +2722,22 @@ export default function App() {
 
   const chooseRole = (selectedRole: Role) => {
     setPendingRole(selectedRole);
-    window.history.pushState({ auth: "setup", selectedRole }, "", `#/onboarding/${selectedRole}`);
+    window.history.pushState({ auth: "login", selectedRole }, "", `#/onboarding/${selectedRole}`);
   };
 
-  const completeOnboarding = () => {
+  const completeOnboarding = (session?: {
+    method: "email" | "mobile";
+    contact: string;
+    mode: "login" | "signup";
+  }) => {
     if (!pendingRole) return;
+    localStorage.setItem("stepin-role", pendingRole);
     sessionStorage.setItem("stepin-role", pendingRole);
+    if (session) {
+      const payload = JSON.stringify({ role: pendingRole, ...session });
+      localStorage.setItem("stepin-auth", payload);
+      sessionStorage.setItem("stepin-auth", payload);
+    }
     const firstPage = defaultPage(pendingRole);
     setRole(pendingRole);
     setPage(firstPage);
@@ -2415,7 +2750,10 @@ export default function App() {
   };
 
   const signOut = () => {
+    localStorage.removeItem("stepin-role");
+    localStorage.removeItem("stepin-auth");
     sessionStorage.removeItem("stepin-role");
+    sessionStorage.removeItem("stepin-auth");
     setRole(null);
     setPendingRole(null);
     setPage("home");
@@ -2427,7 +2765,7 @@ export default function App() {
       <div className="app auth">
         <div className="mobile-shell auth-shell">
           {pendingRole ? (
-            <Setup
+            <AuthScreen
               role={pendingRole}
               onBack={() => {
                 setPendingRole(null);
