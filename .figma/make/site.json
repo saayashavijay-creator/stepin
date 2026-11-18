@@ -1,0 +1,10 @@
+{
+  "description": "A self-paced dance learning platform for beginners and intermediate dancers offering structured video lessons, practice tracking, and instructor feedback in a supportive, non-competitive environment.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
